@@ -1,10 +1,12 @@
 mod archetypes;
+mod archetype_builder;
 
 use std::env::args;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use clap::{arg, Args, Parser, Subcommand};
 use strum::IntoEnumIterator;
+use crate::archetype_builder::ArchetypeBuilder;
 use crate::archetypes::{MavenArchetypeInfo, MavenArchetypes};
 
 #[derive(Parser)]
@@ -30,13 +32,21 @@ enum Commands {
 }
 
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Projs4J::parse();
 
     match &args.command {
 
         Commands::NewProject { project_name, group_id, archetype} => {
             let archetype_info = MavenArchetypeInfo(*archetype);
+            ArchetypeBuilder::init_projects();
+
+
+
+            Command::new("mvn")
+                .current_dir(archetype_info.path()?)
+                .arg("install")
+                .output()?;
 
             Command::new("mvn")
                 .arg("archetype:generate")
@@ -49,10 +59,10 @@ fn main() {
                         format!("-DartifactId={}", *project_name),
                         "-DinteractiveMode=false".to_string()
                     ]
-                ).exec();
+                ).output()?;
         }
     }
 
-
+    Ok(())
 
 }
